@@ -1,0 +1,6 @@
+@MFA.TOTP_HostAddress = http://localhost:5274
+
+GET {{MFA.TOTP_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
