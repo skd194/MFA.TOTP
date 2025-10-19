@@ -1,0 +1,93 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>MFA TOTP Demo</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 2rem auto; }
+    input, button { padding: .5rem; margin: .25rem 0; width: 100%; }
+    .row { display:flex; gap:1rem; }
+    .col { flex:1; }
+    img { max-width: 200px; }
+    pre { background:#f4f4f4; padding:1rem; }
+  </style>
+</head>
+<body>
+  <h1>MFA TOTP Demo UI</h1>
+  <section>
+    <h2>Register</h2>
+    <input id="regEmail" placeholder="Email" />
+    <input id="regPassword" placeholder="Password" />
+    <button onclick="register()">Register</button>
+    <pre id="regRes"></pre>
+  </section>
+
+  <section>
+    <h2>Setup 2FA</h2>
+    <input id="setupUserId" placeholder="UserId (from register)" />
+    <input id="setupEmail" placeholder="Email (optional)" />
+    <button onclick="setup2fa()">Setup</button>
+    <div id="qrArea"></div>
+    <pre id="setupRes"></pre>
+  </section>
+
+  <section>
+    <h2>Verify 2FA</h2>
+    <input id="verifyUserId" placeholder="UserId" />
+    <input id="verifyEmail" placeholder="Email (optional)" />
+    <input id="verifyCode" placeholder="TOTP Code" />
+    <button onclick="verify2fa()">Verify</button>
+    <pre id="verifyRes"></pre>
+  </section>
+
+  <section>
+    <h2>Login</h2>
+    <input id="loginEmail" placeholder="Email" />
+    <input id="loginPassword" placeholder="Password" />
+    <input id="loginTotp" placeholder="TOTP (if required)" />
+    <button onclick="login()">Login</button>
+    <pre id="loginRes"></pre>
+  </section>
+
+<script>
+async function api(path, method = 'POST', body) {
+  const res = await fetch('/api/' + path, { method, headers: { 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+  const text = await res.text();
+  try { return { status: res.status, body: JSON.parse(text) }; } catch(e) { return { status: res.status, body: text }; }
+}
+
+async function register() {
+  const email = document.getElementById('regEmail').value;
+  const pass = document.getElementById('regPassword').value;
+  const r = await api('auth/register', 'POST', { email, password: pass });
+  document.getElementById('regRes').textContent = JSON.stringify(r, null, 2);
+}
+
+async function setup2fa() {
+  const userId = document.getElementById('setupUserId').value;
+  const email = document.getElementById('setupEmail').value;
+  const r = await api('2fa/setup', 'POST', { userId, email, issuer: 'MFA.Demo' });
+  document.getElementById('setupRes').textContent = JSON.stringify(r, null, 2);
+  if (r.body && r.body.qrCodeDataUrl) {
+    document.getElementById('qrArea').innerHTML = '<img src="' + r.body.qrCodeDataUrl + '" alt="qr" />\n<p>Manual key: ' + r.body.manualEntryKey + '</p>';
+  }
+}
+
+async function verify2fa() {
+  const userId = document.getElementById('verifyUserId').value;
+  const email = document.getElementById('verifyEmail').value;
+  const code = document.getElementById('verifyCode').value;
+  const r = await api('2fa/verify', 'POST', { userId, email, code });
+  document.getElementById('verifyRes').textContent = JSON.stringify(r, null, 2);
+}
+
+async function login() {
+  const email = document.getElementById('loginEmail').value;
+  const password = document.getElementById('loginPassword').value;
+  const totp = document.getElementById('loginTotp').value;
+  const r = await api('auth/login', 'POST', { email, password, totpCode: totp });
+  document.getElementById('loginRes').textContent = JSON.stringify(r, null, 2);
+}
+</script>
+</body>
+</html>
